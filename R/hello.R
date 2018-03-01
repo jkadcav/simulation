@@ -92,9 +92,9 @@ dwConnect<-function(){
   library("RPostgreSQL")
   dbHost<-"localhost"
   dbPort<-6432
-  if (!is.na(Sys.getenv("IS_PRODUCTION", NA))) {
+  if (!is.na(Sys.getenv("IS_DEVELOPMENT", NA))) {
     # master, only accessible inside DW data center
-    dbHost<-"dw-staging.cjza6pmqs6im.ap-southeast-2.rds.amazonaws.com"
+    dbHost<-"dw-staging-read-1.cjza6pmqs6im.ap-southeast-2.rds.amazonaws.com"
     dbPort<-5432
   }
   pg <- DBI::dbDriver("PostgreSQL")
