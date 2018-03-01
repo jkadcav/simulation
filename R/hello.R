@@ -90,10 +90,6 @@ isDevelopment<-function(){
   return Sys.getenv("IS_DEVELOPMENT", NA)
 }
 
-getEnv<-function(){
-  return Sys.getenv()
-}
-
 dwConnect<-function(){
   library("RPostgreSQL")
   dbHost<-"localhost"
