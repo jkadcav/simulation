@@ -82,6 +82,17 @@ tryCatch(library(ggplot2),error=function(e){
 # - Rebate
 # - Comission
 
+isProduction<-function(){
+  return Sys.getenv("IS_PRODUCTION", NA)
+}
+
+isDevelopment<-function(){
+  return Sys.getenv("IS_DEVELOPMENT", NA)
+}
+
+getEnv<-function(){
+  return Sys.getenv()
+}
 
 dwConnect<-function(){
   library("RPostgreSQL")
