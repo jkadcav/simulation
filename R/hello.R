@@ -291,7 +291,7 @@ calculateJTD<-function(df){
 
   }
   x<-dplyr::bind_rows(x)
-  df<-join(df,x,type='left')
+  df<-plyr::join(df,x,type='left')
   return(df)
 }
 
