@@ -13,16 +13,8 @@ tryCatch(library(RPostgreSQL),error=function(e){
   library(RPostgreSQL)})
 
 tryCatch(library(tidyjson),error=function(e){
-  install.packages("tidyjson", repos="http://cran.rstudio.com/")
+  install.packages("jsonlite", repos="http://cran.rstudio.com/")
   library(tidyjson)})
-
-tryCatch(library(rjson),error=function(e){
-  install.packages("rjson", repos="http://cran.rstudio.com/")
-  library(rjson)})
-
-tryCatch(library(plyr),error=function(e){
-  install.packages("plyr", repos="http://cran.rstudio.com/")
-  library(plyr)})
 
 tryCatch(library(dplyr),error=function(e){
   install.packages("dplyr", repos="http://cran.rstudio.com/")
@@ -51,6 +43,9 @@ tryCatch(library(calculateRBM),error=function(e){
 tryCatch(library(ggplot2),error=function(e){
   install.packages("ggplot2", repos="http://cran.rstudio.com/")
   library(ggplot2)})
+
+
+
 
 
 # Simulation of Current Model in RACELAB
@@ -636,5 +631,4 @@ masterSimulation<-function(dfrom,dto,animal,country,odds_l,odds_u,staking,mkt_l,
   return(res)
 }
 
-#x<-tradeSimulation('2018-02-01','2018-02-10','THOROUGHBRED','United Kingdom',1,100,0,1,100,1,100,1,3,'analyst','Trading','Betfair')
 #x<-masterSimulation('2018-02-01','2018-02-10','THOROUGHBRED','United Kingdom',1,100,0,1,100,1,100,1,3,'analyst','Trading','Betfair')
