@@ -83,11 +83,11 @@ tryCatch(library(ggplot2),error=function(e){
 # - Comission
 
 isProduction<-function(){
-  return Sys.getenv("IS_PRODUCTION", NA)
+  return(Sys.getenv("IS_PRODUCTION", NA))
 }
 
 isDevelopment<-function(){
-  return Sys.getenv("IS_DEVELOPMENT", NA)
+  return(Sys.getenv("IS_DEVELOPMENT", NA))
 }
 
 dwConnect<-function(){
