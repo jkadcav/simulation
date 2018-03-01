@@ -92,8 +92,8 @@ dwConnect<-function(){
     dbPort<-5432
   }
   else if (!is.na(Sys.getenv("IS_DEVELOPMENT", NA))) {
-    dbHost<-"dw-staging-read-1.cjza6pmqs6im.ap-southeast-2.rds.amazonaws.com"
-    dbPort<-5432
+    dbHost<-"52.64.224.248"
+    dbPort<-8000
   }
   pg <- DBI::dbDriver("PostgreSQL")
   con<-DBI::dbConnect(pg, user="betia_staging", password="poT5oT4Ayct0Eef5vin2Arb7owG3oo",
