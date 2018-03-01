@@ -91,7 +91,7 @@ dwConnect<-function(){
     dbHost<-"dw-staging.cjza6pmqs6im.ap-southeast-2.rds.amazonaws.com"
     dbPort<-5432
   }
-  else if (!is.na(Sys.getenv("IS_DEVELOPMENT", NA))) {
+  if (!is.na(Sys.getenv("IS_DEVELOPMENT", NA))) {
     dbHost<-"52.64.224.248"
     dbPort<-8000
   }
