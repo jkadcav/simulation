@@ -626,14 +626,16 @@ masterSimulation<-function(dfrom,dto,animal,country,odds_l,odds_u,staking,mkt_l,
     b<-daySummary(df,dfrom,dto)
     c<-raceclassSummary(df)
     d<-distSummary(df)
-    res<-jsonlite::toJSON(list(by_track=a,by_day=b,by_class=c,by_distance=d),pretty=TRUE)
+    #res<-jsonlite::toJSON(list(by_track=a,by_day=b,by_class=c,by_distance=d),pretty=TRUE)
+    res<-list(by_track=a,by_day=b,by_class=c,by_distance=d)
   }
   if(sumType=='Stats'){
     a<-list(chiSquareClassic(df,'prob_est'),effPlace(df))
     b<-strikeRateRating(df,pricing)
     c<-byExpectation(df)
     d<-statBreakdown(df)
-    res<-jsonlite::toJSON(list(by_chi=a,strike_rate_rating=b,by_exp=c,stat_summary=d),pretty=TRUE)
+    #res<-jsonlite::toJSON(list(by_chi=a,strike_rate_rating=b,by_exp=c,stat_summary=d),pretty=TRUE)
+    res<-list(by_chi=a,strike_rate_rating=b,by_exp=c,stat_summary=d)
   }
   return(res)
 }
