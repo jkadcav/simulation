@@ -1205,8 +1205,8 @@ masterSimulation<-function(dfrom,dto,animal,country,odds_l,odds_u,staking,mkt_l,
   t<-trackSummary(df)
   d<-distSummary(df)
 =======
-  t<-trackSummary(df) 
-  d<-distSummary(df) 
+  t<-trackSummary(df)
+  d<-distSummary(df)
 >>>>>>> origin/master
 
   r<-list(by_barrier=b,by_class=d,by_track=t,by_distance=d)
@@ -1240,11 +1240,9 @@ masterSimulation<-function(dfrom,dto,animal,country,odds_l,odds_u,staking,mkt_l,
   #
   #  res<-jsonlite::toJSON(list(by_chi=a,strike_rate_rating=b,by_exp=c,stat_summary=d),pretty=TRUE)
   #}
-<<<<<<< HEAD
+
   res<-list(graphs=gs,reports=r,model=m,stat_summary=s)
-=======
-  res<-jsonlite::toJSON(list(graphs=gs,reports=r,model=m,stat_summary=s),pretty=TRUE)
->>>>>>> origin/master
+
   return(res)
 }
 
