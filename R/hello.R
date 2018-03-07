@@ -1,4 +1,5 @@
 
+
 # This is the server logic for a Shiny web application.
 # You can find out more about building applications with Shiny here:
 #
@@ -46,8 +47,6 @@ tryCatch(library(ggplot2),error=function(e){
 
 
 
-
-
 # Simulation of Current Model in RACELAB
 
 # PARAMETERS
@@ -82,6 +81,13 @@ tryCatch(library(ggplot2),error=function(e){
 # - Rebate
 # - Comission
 
+isProduction<-function(){
+  return(Sys.getenv("IS_PRODUCTION", NA))
+}
+
+isDevelopment<-function(){
+  return(Sys.getenv("IS_DEVELOPMENT", NA))
+}
 
 dwConnect<-function(){
   library("RPostgreSQL")
@@ -91,9 +97,9 @@ dwConnect<-function(){
     dbHost<-"dw-staging.cjza6pmqs6im.ap-southeast-2.rds.amazonaws.com"
     dbPort<-5432
   }
-  else if (!is.na(Sys.getenv("IS_DEVELOPMENT", NA))) {
-    dbHost<-"dw-staging-read-1.cjza6pmqs6im.ap-southeast-2.rds.amazonaws.com"
-    dbPort<-5432
+  if (!is.na(Sys.getenv("IS_DEVELOPMENT", NA))) {
+    dbHost<-"52.64.224.248"
+    dbPort<-8000
   }
   pg <- DBI::dbDriver("PostgreSQL")
   con<-DBI::dbConnect(pg, user="betia_staging", password="poT5oT4Ayct0Eef5vin2Arb7owG3oo",
@@ -154,7 +160,8 @@ fetchData<-function(dfrom,dto,animal,country){
                             coalesce((select analysis_json::json->event_competitor_race_data.number::text->'yard'  from market_analyses where market_name = 'analyst_master' and market_analyses.meeting_id = meetings.id and market_analyses.event_number = events.number limit 1),'{}') as yard,
                             coalesce((select analysis_json::json->event_competitor_race_data.number::text->'xa_jnt'  from market_analyses where market_name = 'analyst_master' and market_analyses.meeting_id = meetings.id and market_analyses.event_number = events.number limit 1),'{}') as jnt,
                             (select market_json::json->'prices'->event_competitor_race_data.number-1 from markets where market_name = 'WIN' and markets.provider = 'racingandsports' and markets.meeting_id = meetings.id and markets.event_number = events.number limit 1) as rs,
-                            (Select count(*) from event_competitors where events.id = event_competitors.event_id) as runners
+                            (Select count(*) from event_competitors where events.id = event_competitors.event_id) as runners,
+                            uk_analyst_bets.analyst
                             FROM meetings
                             LEFT OUTER JOIN venues ON venues.id = meetings.venue_id
                             LEFT OUTER JOIN countries ON countries.id = venues.country_id
@@ -174,6 +181,7 @@ fetchData<-function(dfrom,dto,animal,country){
                             LEFT OUTER JOIN competitors as dam_competitors on competitor_race_data.dam_id = dam_competitors.id
                             LEFT OUTER JOIN markets ON markets.meeting_id = meetings.id and markets.event_number = events.number and markets.provider = venues.host_market and markets.market_name = 'WIN'
                             LEFT OUTER JOIN rail_positions ON event_race_data.rail_position_id = rail_positions.id
+                            LEFT OUTER JOIN uk_analyst_bets on uk_analyst_bets.race_date = meetings.meeting_date and venues.name = uk_analyst_bets.course and events.number = uk_analyst_bets.race_number and event_competitor_race_data.number = uk_analyst_bets.runner_number
                             WHERE meeting_date>=\'",dfrom,"\' and meeting_date<=\'",dto,"\' and venue_types.name = \'",animal,"\' and countries.name = \'",country,"\' and scratched=FALSE ",lvl,"
                             ORDER BY meeting_date,venue_name,event_number,program_number ASC;",sep=""))
   dbDisconnect(con)
@@ -284,7 +292,7 @@ calculateJTD<-function(df){
 
   }
   x<-dplyr::bind_rows(x)
-  df<-join(df,x,type='left')
+  df<-plyr::join(df,x,type='left')
   return(df)
 }
 
@@ -329,7 +337,7 @@ tradeSimulation<-function(dfrom,dto,animal,country,odds_l,odds_u,staking,mkt_l,m
   return(df)
 }
 
-trackSummary<-function(df){
+trackSummaryGraph<-function(df){
   venues<-unique(df[,c('venue_name')])
   res<-as.data.frame(matrix(NA,length(venues),5))
   colnames(res)<-c('trades','turnover','ret','roi','profit')
@@ -358,13 +366,14 @@ trackSummary<-function(df){
   return(res)
 }
 
-raceclassSummary<-function(df){
-  classes<-unique(df[,c('race_class')])
-  res<-as.data.frame(matrix(NA,length(classes),5))
+trackSummary<-function(df){
+  venues<-unique(df[,c('venue_name','date_day')])
+  res<-as.data.frame(matrix(NA,length(venues),5))
   colnames(res)<-c('trades','turnover','ret','roi','profit')
 
-  for(i in 1:length(classes)){
-    filter<-classes[i]==df$race_class
+
+  for(i in 1:length(venues)){
+    filter<-venues$venue[i]==df$venue_name & venues$date_day[i]==df$date_day
     a<-df[filter,]
     n<-res$trades[i]<-nrow(a)
     t<-res$turnover[i]<-sum(a$stake,na.rm=T)
@@ -374,16 +383,42 @@ raceclassSummary<-function(df){
   }
   res<-round(res,2)
   res$trades<-round(res$trades,0)
-  res$race_class<-classes
+
+  res[,c('venue','day')]<-venues[,c('venue_name','date_day')]
   #res$turnover<-format.money(res$turnover)
   #res$ret<-format.money(res$ret)
   #res$profit<-format.money(res$profit)
 
 
-
-  res<-res[,c('race_class','trades','turnover','ret','profit','roi')]
+  res<-res[,c('trades','turnover','ret','profit','roi','venue','day')]
   #colnames(res)<-c('Venue','Trades','Turnover','Return','Profit','ROI%')
-  res<-list(split(res[,c('turnover','ret','roi','profit')],res$race_class))
+  res<-lapply(split(res, res$venue), function(x) split(x[,c('turnover','ret','roi','profit')], x$day))
+  return(res)
+}
+
+raceclassSummary<-function(df){
+  classes<-unique(df[,c('race_class','date_day')])
+  res<-as.data.frame(matrix(NA,length(classes),5))
+  colnames(res)<-c('trades','turnover','ret','roi','profit')
+
+  for(i in 1:length(classes)){
+    filter<-classes$race_class[i]==df$race_class & classes$date_day[i]==df$date_day
+    a<-df[filter,]
+    n<-res$trades[i]<-nrow(a)
+    t<-res$turnover[i]<-sum(a$stake,na.rm=T)
+    p<-res$profit[i]<-sum(a$pl,na.rm=T)
+    r<-res$ret[i]<-sum(t,p)
+    res$roi[i]<-r/t
+  }
+  res<-round(res,2)
+  res$trades<-round(res$trades,0)
+  res[,c('race_class','day')]<-classes[,c('race_class','date_day')]
+  #res$turnover<-format.money(res$turnover)
+  #res$ret<-format.money(res$ret)
+  #res$profit<-format.money(res$profit)
+
+  #colnames(res)<-c('Venue','Trades','Turnover','Return','Profit','ROI%')
+  res<-lapply(split(res, res$race_class), function(x) split(x[,c('turnover','ret','roi','profit')], x$day))
   return(res)
 }
 
@@ -407,6 +442,36 @@ daySummary<-function(df,dfrom,dto){
   return(res)
 }
 
+analystSummary<-function(df){
+  analysts<-unique(df[,c('analyst')])
+  res<-as.data.frame(matrix(NA,length(analysts),5))
+  colnames(res)<-c('trades','turnover','ret','roi','profit')
+
+  for(i in 1:length(analysts)){
+    filter<-analysts[i]==df$analyst
+    a<-df[filter,]
+    n<-res$trades[i]<-nrow(a)
+    t<-res$turnover[i]<-sum(a$stake,na.rm=T)
+    p<-res$profit[i]<-sum(a$pl,na.rm=T)
+    r<-res$ret[i]<-sum(t,p)
+    res$roi[i]<-r/t
+  }
+  res<-round(res,2)
+  res$trades<-round(res$trades,0)
+  res$analyst<-analysts
+  #res$turnover<-format.money(res$turnover)
+  #res$ret<-format.money(res$ret)
+  #res$profit<-format.money(res$profit)
+
+
+
+  res<-res[,c('analyst','trades','turnover','ret','profit','roi')]
+  #colnames(res)<-c('Venue','Trades','Turnover','Return','Profit','ROI%')
+  res<-list(split(res[,c('turnover','ret','roi','profit')],res$analyst))
+  return(res)
+}
+
+
 distSummary<-function(df){
   combos<-unique(df[,c('dist_band','date_day')])
   res<-as.data.frame(matrix(NA,nrow(combos),4))
@@ -426,6 +491,30 @@ distSummary<-function(df){
 
   #still needs some
   res<-lapply(split(res, res$dist_band), function(x) split(x[,c('turnover','ret','roi','profit')], x$day))
+
+  return(res)
+}
+
+
+barrierSummary<-function(df){
+  combos<-unique(df[,c('barrier','date_day')])
+  res<-as.data.frame(matrix(NA,nrow(combos),4))
+  colnames(res)<-c('turnover','ret','roi','profit')
+
+  for(i in 1:nrow(combos)){
+    filter<-combos$barrier[i]==df$barrier & combos$date_day[i]==df$date_day
+    a<-df[filter,]
+
+    t<-res$turnover[i]<-sum(a$stake,na.rm=T)
+    p<-res$profit[i]<-sum(a$pl,na.rm=T)
+    r<-res$ret[i]<-sum(t,p)
+    res$roi[i]<-r/t
+  }
+  res[,c('barrier','day')]<-combos[,c('barrier','date_day')]
+
+
+  #still needs some
+  res<-lapply(split(res, res$barrier), function(x) split(x[,c('turnover','ret','roi','profit')], x$day))
 
   return(res)
 }
@@ -614,21 +703,54 @@ effPlace<-function(data){
 
 masterSimulation<-function(dfrom,dto,animal,country,odds_l,odds_u,staking,mkt_l,mkt_u,exp_l,exp_u,conf_l,conf_u,pricing,sumType,market){
   df<-tradeSimulation(dfrom,dto,animal,country,odds_l,odds_u,staking,mkt_l,mkt_u,exp_l,exp_u,conf_l,conf_u,pricing,sumType,market)
-  if(sumType=='Trading'){
-    a<-trackSummary(df)
-    b<-daySummary(df,dfrom,dto)
-    c<-raceclassSummary(df)
-    d<-distSummary(df)
-    res<-jsonlite::toJSON(list(by_track=a,by_day=b,by_class=c,by_distance=d),pretty=TRUE)
-  }
-  if(sumType=='Stats'){
-    a<-list(chiSquareClassic(df,'prob_est'),effPlace(df))
-    b<-strikeRateRating(df,pricing)
-    c<-byExpectation(df)
-    d<-statBreakdown(df)
-    res<-jsonlite::toJSON(list(by_chi=a,strike_rate_rating=b,by_exp=c,stat_summary=d),pretty=TRUE)
-  }
+
+  ## GRAPH DATA
+  ## Includes by day, and by venue
+  d<-daySummary(df,dfrom,dto)
+  t<-trackSummary(df)
+  gs<-list(by_trading=d,by_track=t)
+
+
+  ## Trading report style breakdowns..
+  #b<-barrierSummary() ## yet to build this one
+  b<-barrierSummary(df)
+  g<-raceclassSummary(df) ## build by day..
+  t<-trackSummary(df)
+  d<-distSummary(df)
+
+  r<-list(by_barrier=b,by_class=d,by_track=t,by_distance=d)
+
+
+
+  # # Stats breakdown under models nest..
+  c<-chiSquareClassic(df,'prob_est')
+  e<-effPlace(df)
+  c<-list(c,e)
+  e<-byExpectation(df)
+  b<-strikeRateRating(df,pricing)
+  m<-list(by_chi=c,strike_rating_rating=b,by_exp=e)
+
+  s<-statBreakdown(df)
+
+  #
+  #if(sumType=='Trading'){
+  #  a<-trackSummary(df)
+  #  b<-daySummary(df,dfrom,dto)
+  #  c<-raceclassSummary(df)
+  #  d<-distSummary(df)
+  #  e<-analystSummary(df)
+  #  res<-jsonlite::toJSON(list(by_track=a,by_day=b,by_class=c,by_distance=d,analyst_summary=e),pretty=TRUE)
+  #}
+  #if(sumType=='Stats'){
+  #  a<-list(chiSquareClassic(df,'prob_est'),effPlace(df))
+  #  b<-strikeRateRating(df,pricing)
+  #  c<-byExpectation(df)
+  #  d<-statBreakdown(df)
+  #
+  #  res<-jsonlite::toJSON(list(by_chi=a,strike_rate_rating=b,by_exp=c,stat_summary=d),pretty=TRUE)
+  #}
+  res<-list(graphs=gs,reports=r,model=m,stat_summary=s)
   return(res)
 }
 
-#x<-masterSimulation('2018-02-01','2018-02-10','THOROUGHBRED','United Kingdom',1,100,0,1,100,1,100,1,3,'analyst','Trading','Betfair')
+#x<-simulation::masterSimulation('2018-02-01','2018-02-10','THOROUGHBRED','United Kingdom',1,100,0,1,100,1,100,1,3,'analyst','Trading','Betfair')
