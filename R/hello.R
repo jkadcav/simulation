@@ -707,7 +707,7 @@ masterSimulation<-function(dfrom,dto,animal,country,odds_l,odds_u,staking,mkt_l,
   ## GRAPH DATA
   ## Includes by day, and by venue
   d<-daySummary(df,dfrom,dto)
-  t<-trackSummary(df)
+  t<-trackSummaryGraph(df)
   gs<-list(by_trading=d,by_track=t)
 
 
