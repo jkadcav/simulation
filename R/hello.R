@@ -569,7 +569,7 @@ chiSquareClassic<-function(data,market,ind=1){
   res[,5:7]<-round(res[,5:7],2)
   res<-res[,c('upper','lower','w','n','act','exp','chi')]
   if(ind==1) {
-    res<-list(split(res[,c('w','n','act','exp','chi')],res$lower))
+    res<-list(model=split(res[,c('w','n','act','exp','chi')],res$lower))
     return(res)
   }
   else{
@@ -597,7 +597,7 @@ byExpectation<-function(df){
     res$exp[i]<-1/mean(n$prob_est,na.rm=T)
     res$roi[i]<-(sum(n$pl,na.rm=T)/sum(n$stake,na.rm=T))+1
   }
-  res<-list(split(res[,c('n','w','act','exp','roi')],res$min))
+  res<-list(model=split(res[,c('n','w','act','exp','roi')],res$min))
   return(res)
 }
 
@@ -661,7 +661,7 @@ statBreakdown<-function(data){
   res$handicap[2]<-abs(rSqPseudo(data,'prob_est'))
   res$handicap[3]<-spearmanModel(data,'prob_est')
 
-  res<-list(split(res[,c('public','handicap')],res$type))
+  res<-split(res[,c('public','handicap')],res$type)
   return(res)
 }
 
@@ -696,7 +696,7 @@ effPlace<-function(data){
       res$percu<-NULL
       if(k==1) pricing<-'model'
       else pricing<-'market'
-      x[[paste(pricing,'_efficiency_',j,sep="")]]<-list(split(res[,c('n','Exp','Act','Z')],res$perc))
+      x[[paste(pricing,'_efficiency_',j,sep="")]]<-split(res[,c('n','Exp','Act','Z')],res$perc)
     }
   }
   return(x)
@@ -726,7 +726,7 @@ masterSimulation<-function(dfrom,dto,animal,country,odds_l,odds_u,staking,mkt_l,
   # # Stats breakdown under models nest..
   c<-chiSquareClassic(df,'prob_est')
   e<-effPlace(df)
-  c<-list(c,e)
+  c<-c(c,e)
   e<-byExpectation(df)
   b<-strikeRateRating(df,pricing)
   m<-list(by_chi=c,strike_rating_rating=b,by_exp=e)
@@ -750,7 +750,7 @@ masterSimulation<-function(dfrom,dto,animal,country,odds_l,odds_u,staking,mkt_l,
   #
   #  res<-jsonlite::toJSON(list(by_chi=a,strike_rate_rating=b,by_exp=c,stat_summary=d),pretty=TRUE)
   #}
-  res<-list(graphs=gs,reports=r,model=m,stat_summary=s)
+  res<-list(graphs=gs,reports=r,models=m,stat_summary=s)
   return(res)
 }
 
